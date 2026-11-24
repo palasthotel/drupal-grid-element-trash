@@ -1,8 +1,8 @@
 name: Grid Element Trash
 description: Puts Containers and Boxes into a trash so they cannot be used in Grid Editor anymore
 package: Grid
-core: 8.x
+core_version_requirement: ^10.3 || ^11
 type: module
 dependencies:
- - grid
+ - grid:grid
 version: 0.0.0 # x-release-please-version
