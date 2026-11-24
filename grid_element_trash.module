@@ -2,6 +2,7 @@
 /**
 * Register menus and urls
 */
+use Drupal\Core\Url;
 use Drupal\node\Entity\Node;
 
 /**
@@ -15,22 +16,25 @@ use Drupal\node\Entity\Node;
  */
 function grid_element_trash_grid_boxes_search_alter(&$boxes,$grid_id,$node_id)
 {
-	/** @var Node $node */
-	$node = Node::Load($node_id);
-	$trashed=\Drupal::config("grid.trash")->get("trashed_boxes");
-	$trashed_reuse=\Drupal::config("grid.trash")->get("trashed_reuse_boxes");
+	/** @var Node|null $node */
+	$node = Node::load($node_id);
+	if (!$node) {
+		return;
+	}
+	$config = \Drupal::config("grid.trash");
+	$trashed = $config->get("trashed_boxes") ?: [];
+	$trashed_reuse = $config->get("trashed_reuse_boxes") ?: [];
 	for($i=0;$i<count($boxes);$i++)
 	{
 		if($boxes[$i]['type'] == "reference")
 		{
-			$map = $trashed_reuse[$boxes[$i]["content"]->boxid];
-
+			$map = $trashed_reuse[$boxes[$i]["content"]->boxid] ?? [];
 		}
 		else
 		{
-			$map = $trashed[$boxes[$i]['type']];
+			$map = $trashed[$boxes[$i]['type']] ?? [];
 		}
-		if( $map[$node->getType()] )
+		if( !empty($map[$node->getType()]) )
 	    {
 	        array_splice($boxes,$i,1);
 	        $i--;
@@ -48,13 +52,16 @@ function grid_element_trash_grid_boxes_search_alter(&$boxes,$grid_id,$node_id)
  */
 function grid_element_trash_grid_containers_alter(&$containers,$grid_id,$node_id)
 {
-	/** @var Node $node */
+	/** @var Node|null $node */
 	$node = Node::load($node_id);
-	$trash=\Drupal::config("grid.trash")->get("trashed_containers");
+	if (!$node) {
+		return;
+	}
+	$trash = \Drupal::config("grid.trash")->get("trashed_containers") ?: [];
 	for($i=0;$i<count($containers);$i++)
 	{
-		$map = $trash[$containers[$i]["type"]];
-	    if( $map[$node->getType()] )
+		$map = $trash[$containers[$i]["type"]] ?? [];
+	    if( !empty($map[$node->getType()]) )
 	    {
 	        array_splice($containers,$i,1);
 	        $i--;
@@ -70,13 +77,16 @@ function grid_element_trash_grid_containers_alter(&$containers,$grid_id,$node_id
  */
 function grid_element_trash_grid_reusable_containers_alter(&$containers,$grid_id,$node_id)
 {
-	/** @var Node $node */
+	/** @var Node|null $node */
 	$node = Node::load($node_id);
-	$trash=\Drupal::config("grid.trash")->get("trashed_reuse_containers");
+	if (!$node) {
+		return;
+	}
+	$trash = \Drupal::config("grid.trash")->get("trashed_reuse_containers") ?: [];
 	for($i=0;$i<count($containers);$i++)
 	{
-		$map = $trash[$containers[$i]["id"]];
-	    if( $map[$node->getType()] )
+		$map = $trash[$containers[$i]["id"]] ?? [];
+	    if( !empty($map[$node->getType()]) )
 	    {
 	        array_splice($containers,$i,1);
 	        $i--;
@@ -84,4 +94,81 @@ function grid_element_trash_grid_reusable_containers_alter(&$containers,$grid_id
 	}
 }
 
-?>
+/**
+ * Tells whether a reusable element is on the trash list for all content types.
+ *
+ * Such an element can not be used anywhere, so there is no point in listing it
+ * among the reusable elements.
+ *
+ * @param array $trashed
+ *   The trash list, keyed by the id of the reusable element.
+ * @param int|string $id
+ *   The id of the reusable element.
+ * @param string[] $content_types
+ *   The content types the element could be used in.
+ *
+ * @return bool
+ *   TRUE if the element is trashed for every one of the content types.
+ */
+function _grid_element_trash_is_fully_trashed(array $trashed, $id, array $content_types) {
+  if (empty($content_types) || empty($trashed[$id])) {
+    return FALSE;
+  }
+  foreach ($content_types as $content_type) {
+    if (empty($trashed[$id][$content_type])) {
+      return FALSE;
+    }
+  }
+  return TRUE;
+}
+
+/**
+ * Implements hook_grid_reuse_box_trash_url().
+ *
+ * Adds the "put to trash" link to the list of reusable boxes.
+ */
+function grid_element_trash_grid_reuse_box_trash_url($id) {
+  return Url::fromRoute('grid_element_trash.reusable_box.trash', ['id' => $id]);
+}
+
+/**
+ * Implements hook_grid_reuse_container_trash_url().
+ *
+ * Adds the "put to trash" link to the list of reusable containers.
+ */
+function grid_element_trash_grid_reuse_container_trash_url($id) {
+  return Url::fromRoute('grid_element_trash.reusable_container.trash', ['id' => $id]);
+}
+
+/**
+ * Implements hook_grid_reuse_box_ids_alter().
+ *
+ * Hides reusable boxes in the list that are on the trash list for every content
+ * type.
+ */
+function grid_element_trash_grid_reuse_box_ids_alter(&$box_ids) {
+  $content_types = \Drupal::config('grid.settings')->get('enabled_node_types') ?: [];
+  $trashed = \Drupal::config('grid.trash')->get('trashed_reuse_boxes') ?: [];
+  $box_ids = array_values(array_filter($box_ids, function ($id) use ($trashed, $content_types) {
+    return !_grid_element_trash_is_fully_trashed($trashed, $id, $content_types);
+  }));
+}
+
+/**
+ * Implements hook_grid_reuse_container_ids_alter().
+ *
+ * Hides reusable containers in the list that are on the trash list for every
+ * content type. The sidebar content type has no reusable containers, so it is
+ * not taken into account.
+ */
+function grid_element_trash_grid_reuse_container_ids_alter(&$container_ids) {
+  $settings = \Drupal::config('grid.settings');
+  $sidebar = $settings->get('sidebar_content');
+  $content_types = array_values(array_filter($settings->get('enabled_node_types') ?: [], function ($type) use ($sidebar) {
+    return $type !== $sidebar;
+  }));
+  $trashed = \Drupal::config('grid.trash')->get('trashed_reuse_containers') ?: [];
+  $container_ids = array_values(array_filter($container_ids, function ($id) use ($trashed, $content_types) {
+    return !_grid_element_trash_is_fully_trashed($trashed, $id, $content_types);
+  }));
+}

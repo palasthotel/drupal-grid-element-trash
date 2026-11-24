@@ -13,3 +13,19 @@ admin.config.grid.containertrash:
     _title: Container Trash
   requirements:
     _permission: administer grid
+
+grid_element_trash.reusable_box.trash:
+  path: 'admin/config/grid/boxes/{id}/trash'
+  defaults:
+    _form: '\Drupal\grid_element_trash\Form\ReusableBoxTrashForm'
+    _title: Put Box to Trash
+  requirements:
+    _permission: administer grid
+
+grid_element_trash.reusable_container.trash:
+  path: 'admin/config/grid/container/{id}/trash'
+  defaults:
+    _form: '\Drupal\grid_element_trash\Form\ReusableContainerTrashForm'
+    _title: Put Container to Trash
+  requirements:
+    _permission: administer grid
