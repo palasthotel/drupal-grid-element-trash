@@ -16,22 +16,25 @@ use Drupal\node\Entity\Node;
  */
 function grid_element_trash_grid_boxes_search_alter(&$boxes,$grid_id,$node_id)
 {
-	/** @var Node $node */
-	$node = Node::Load($node_id);
-	$trashed=\Drupal::config("grid.trash")->get("trashed_boxes");
-	$trashed_reuse=\Drupal::config("grid.trash")->get("trashed_reuse_boxes");
+	/** @var Node|null $node */
+	$node = Node::load($node_id);
+	if (!$node) {
+		return;
+	}
+	$config = \Drupal::config("grid.trash");
+	$trashed = $config->get("trashed_boxes") ?: [];
+	$trashed_reuse = $config->get("trashed_reuse_boxes") ?: [];
 	for($i=0;$i<count($boxes);$i++)
 	{
 		if($boxes[$i]['type'] == "reference")
 		{
-			$map = $trashed_reuse[$boxes[$i]["content"]->boxid];
-
+			$map = $trashed_reuse[$boxes[$i]["content"]->boxid] ?? [];
 		}
 		else
 		{
-			$map = $trashed[$boxes[$i]['type']];
+			$map = $trashed[$boxes[$i]['type']] ?? [];
 		}
-		if( $map[$node->getType()] )
+		if( !empty($map[$node->getType()]) )
 	    {
 	        array_splice($boxes,$i,1);
 	        $i--;
@@ -49,13 +52,16 @@ function grid_element_trash_grid_boxes_search_alter(&$boxes,$grid_id,$node_id)
  */
 function grid_element_trash_grid_containers_alter(&$containers,$grid_id,$node_id)
 {
-	/** @var Node $node */
+	/** @var Node|null $node */
 	$node = Node::load($node_id);
-	$trash=\Drupal::config("grid.trash")->get("trashed_containers");
+	if (!$node) {
+		return;
+	}
+	$trash = \Drupal::config("grid.trash")->get("trashed_containers") ?: [];
 	for($i=0;$i<count($containers);$i++)
 	{
-		$map = $trash[$containers[$i]["type"]];
-	    if( $map[$node->getType()] )
+		$map = $trash[$containers[$i]["type"]] ?? [];
+	    if( !empty($map[$node->getType()]) )
 	    {
 	        array_splice($containers,$i,1);
 	        $i--;
@@ -71,13 +77,16 @@ function grid_element_trash_grid_containers_alter(&$containers,$grid_id,$node_id
  */
 function grid_element_trash_grid_reusable_containers_alter(&$containers,$grid_id,$node_id)
 {
-	/** @var Node $node */
+	/** @var Node|null $node */
 	$node = Node::load($node_id);
-	$trash=\Drupal::config("grid.trash")->get("trashed_reuse_containers");
+	if (!$node) {
+		return;
+	}
+	$trash = \Drupal::config("grid.trash")->get("trashed_reuse_containers") ?: [];
 	for($i=0;$i<count($containers);$i++)
 	{
-		$map = $trash[$containers[$i]["id"]];
-	    if( $map[$node->getType()] )
+		$map = $trash[$containers[$i]["id"]] ?? [];
+	    if( !empty($map[$node->getType()]) )
 	    {
 	        array_splice($containers,$i,1);
 	        $i--;
