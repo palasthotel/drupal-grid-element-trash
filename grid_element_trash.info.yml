@@ -5,3 +5,4 @@ core: 8.x
 type: module
 dependencies:
  - grid
+version: 0.0.0 # x-release-please-version
