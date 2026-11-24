@@ -1,0 +1,16 @@
+{
+    "name": "palasthotel/drupal-grid-element-trash",
+    "description": "Puts grid containers and boxes into a trash so they cannot be used in the Grid editor anymore.",
+    "type": "drupal-module",
+    "license": "GPL-3.0-or-later",
+    "homepage": "https://github.com/palasthotel/drupal-grid-element-trash",
+    "support": {
+        "issues": "https://github.com/palasthotel/drupal-grid-element-trash/issues",
+        "source": "https://github.com/palasthotel/drupal-grid-element-trash"
+    },
+    "require": {
+        "php": ">=8.2",
+        "drupal/core": "^10.3 || ^11",
+        "palasthotel/drupal-grid": "^3.1"
+    }
+}
